@@ -1,11 +1,3 @@
-/*
-	Created by @DawnosaurDev at youtube.com/c/DawnosaurStudios
-	Thanks so much for checking this out and I hope you find it helpful! 
-	If you have any further queries, questions or feedback feel free to reach out on my twitter or leave a comment on youtube :D
-
-	Feel free to use this in your own games, and I'd love to see anything you make!
- */
-
 using System.Collections;
 using UnityEngine;
 
@@ -38,6 +30,8 @@ public class PlayerMovementController : MonoBehaviour
     public float LastOnWallLeftTime { get; private set; }
 
     //Jump
+    private int _jumpLeft;
+    private bool _jumpRefilling;
     private bool _isJumpCut;
     private bool _isJumpFalling;
 
@@ -49,7 +43,7 @@ public class PlayerMovementController : MonoBehaviour
     private int _dashesLeft;
     private bool _dashRefilling;
     private Vector2 _lastDashDir;
-    private bool _isDashAttacking;
+    private bool _isDash;
 
     #endregion
 
@@ -205,10 +199,6 @@ public class PlayerMovementController : MonoBehaviour
         #region DASH CHECKS
         if (CanDash() && LastPressedDashTime > 0)
         {
-            //Freeze game for split second. Adds juiciness and a bit of forgiveness over directional input
-            Sleep(Data.dashSleepTime);
-
-            //If not direction pressed, dash forward
             _lastDashDir = IsFacingRight ? Vector2.right : Vector2.left;
             AnimHandler.startedDashing = true;
 
@@ -229,7 +219,7 @@ public class PlayerMovementController : MonoBehaviour
         #endregion
 
         #region GRAVITY
-        if (!_isDashAttacking)
+        if (!_isDash)
         {
             //Higher gravity if we've released the jump input or are falling
             if (IsSliding)
@@ -283,10 +273,6 @@ public class PlayerMovementController : MonoBehaviour
                 Run(Data.wallJumpRunLerp);
             else
                 Run(1);
-        }
-        else if (_isDashAttacking)
-        {
-            Run(Data.dashEndRunLerp);
         }
 
         //Handle Slide
@@ -382,12 +368,6 @@ public class PlayerMovementController : MonoBehaviour
 
         //Convert this to a vector and apply to rigidbody
         RB.AddForce(movement * Vector2.right, ForceMode2D.Force);
-
-        /*
-		 * For those interested here is what AddForce() will do
-		 * RB.velocity = new Vector2(RB.velocity.x + (Time.fixedDeltaTime  * speedDif * accelRate) / RB.mass, RB.velocity.y);
-		 * Time.fixedDeltaTime is by default in Unity 0.02 seconds equal to 50 FixedUpdate() calls per second
-		*/
     }
 
     private void Turn()
@@ -404,6 +384,8 @@ public class PlayerMovementController : MonoBehaviour
     #region JUMP METHODS
     private void Jump()
     {
+        _jumpLeft--;
+
         //Ensures we can't call Jump multiple times from one press
         LastPressedJumpTime = 0;
         LastOnGroundTime = 0;
@@ -422,6 +404,8 @@ public class PlayerMovementController : MonoBehaviour
 
     private void WallJump(int dir)
     {
+        _jumpLeft--;
+
         //Ensures we can't call Wall Jump multiple times from one press
         LastPressedJumpTime = 0;
         LastOnGroundTime = 0;
@@ -443,6 +427,14 @@ public class PlayerMovementController : MonoBehaviour
         RB.AddForce(force, ForceMode2D.Impulse);
         #endregion
     }
+    private IEnumerator RefillJump(int amount)
+    {
+        //SHoet cooldown, so we can't constantly dash along the ground, again this is the implementation in Celeste, feel free to change it up
+        _jumpRefilling = true;
+        yield return new WaitForSeconds(Data.jumpRefillTime);
+        _jumpRefilling = false;
+        _jumpLeft = Mathf.Min(Data.jumpAmount, _jumpLeft + 1);
+    }
     #endregion
 
     #region DASH METHODS
@@ -458,12 +450,12 @@ public class PlayerMovementController : MonoBehaviour
         float startTime = Time.time;
 
         _dashesLeft--;
-        _isDashAttacking = true;
+        _isDash = true;
 
         SetGravityScale(0);
 
         //We keep the player's velocity at the dash speed during the "attack" phase (in celeste the first 0.15s)
-        while (Time.time - startTime <= Data.dashAttackTime)
+        while (Time.time - startTime <= Data.dashDuration)
         {
             RB.velocity = dir.normalized * Data.dashSpeed;
             //Pauses the loop until the next frame, creating something of a Update loop. 
@@ -472,17 +464,10 @@ public class PlayerMovementController : MonoBehaviour
         }
 
         startTime = Time.time;
-
-        _isDashAttacking = false;
+        _isDash = false;
 
         //Begins the "end" of our dash where we return some control to the player but still limit run acceleration (see Update() and Run())
         SetGravityScale(Data.gravityScale);
-        RB.velocity = Data.dashEndSpeed * dir.normalized;
-
-        while (Time.time - startTime <= Data.dashEndTime)
-        {
-            yield return null;
-        }
 
         //Dash over
         IsDashing = false;
@@ -530,12 +515,23 @@ public class PlayerMovementController : MonoBehaviour
 
     private bool CanJump()
     {
-        return LastOnGroundTime > 0 && !IsJumping;
+        if (!Data.multipleJumpable)
+        {
+            return LastOnGroundTime > 0 && !IsJumping;
+        }
+        else
+        {
+            if (!IsJumping && _jumpLeft < Data.jumpAmount && (LastOnGroundTime > 0 || LastOnWallTime > 0) && !_jumpRefilling)
+            {
+                StartCoroutine(nameof(RefillJump), 1);
+            }
+            return _jumpLeft > 0;
+        }
     }
 
     private bool CanWallJump()
     {
-        return LastPressedJumpTime > 0 && LastOnWallTime > 0 && LastOnGroundTime <= 0 && (!IsWallJumping ||
+        return Data.wallJumpable && LastPressedJumpTime > 0 && LastOnWallTime > 0 && LastOnGroundTime <= 0 && (!IsWallJumping ||
              (LastOnWallRightTime > 0 && _lastWallJumpDir == 1) || (LastOnWallLeftTime > 0 && _lastWallJumpDir == -1));
     }
 
@@ -551,7 +547,7 @@ public class PlayerMovementController : MonoBehaviour
 
     private bool CanDash()
     {
-        if (!IsDashing && _dashesLeft < Data.dashAmount && LastOnGroundTime > 0 && !_dashRefilling)
+        if (Data.dashable && !IsDashing && _dashesLeft < Data.dashAmount && (LastOnGroundTime > 0 || LastOnWallTime > 0) && !_dashRefilling)
         {
             StartCoroutine(nameof(RefillDash), 1);
         }
@@ -561,7 +557,7 @@ public class PlayerMovementController : MonoBehaviour
 
     public bool CanSlide()
     {
-        if (LastOnWallTime > 0 && !IsJumping && !IsWallJumping && !IsDashing && LastOnGroundTime <= 0)
+        if (Data.slideable && LastOnWallTime > 0 && !IsJumping && !IsWallJumping && !IsDashing && LastOnGroundTime <= 0)
             return true;
         else
             return false;
