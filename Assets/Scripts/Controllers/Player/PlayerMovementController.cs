@@ -169,19 +169,8 @@ public class PlayerMovementController : MonoBehaviour
 
         if (!IsDashing)
         {
-            //Jump
-            if (CanJump() && LastPressedJumpTime > 0)
-            {
-                IsJumping = true;
-                IsWallJumping = false;
-                _isJumpCut = false;
-                _isJumpFalling = false;
-                Jump();
-
-                AnimHandler.startedJumping = true;
-            }
             //WALL JUMP
-            else if (CanWallJump() && LastPressedJumpTime > 0)
+            if (CanWallJump() && LastPressedJumpTime > 0)
             {
                 IsWallJumping = true;
                 IsJumping = false;
@@ -193,13 +182,29 @@ public class PlayerMovementController : MonoBehaviour
 
                 WallJump(_lastWallJumpDir);
             }
+            //Jump
+            else if (CanJump() && LastPressedJumpTime > 0)
+            {
+                IsJumping = true;
+                IsWallJumping = false;
+                _isJumpCut = false;
+                _isJumpFalling = false;
+                Jump();
+
+                AnimHandler.startedJumping = true;
+            }
+
         }
         #endregion
 
         #region DASH CHECKS
         if (CanDash() && LastPressedDashTime > 0)
         {
+
             _lastDashDir = IsFacingRight ? Vector2.right : Vector2.left;
+            if (IsSliding)
+                _lastDashDir.x *= -1;
+
             AnimHandler.startedDashing = true;
 
             IsDashing = true;
