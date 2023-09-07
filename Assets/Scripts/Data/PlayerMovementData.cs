@@ -39,10 +39,10 @@ public class PlayerMovementData : ScriptableObject
 	public float jumpHangMaxSpeedMult;
 
 	[Space(10)]
-	[Header("Double Jump")]
-	public bool multipleJumpable;
-	[Range(1, 10)] public int jumpAmount;
-	public float jumpRefillTime;
+	[Header("Air Jump")]
+	public bool airJumpable;
+	[Range(1, 10)] public int airJumpAmount;
+	public float airjumpRefillTime;
 
 	[Space(10)]
 
@@ -70,7 +70,7 @@ public class PlayerMovementData : ScriptableObject
 
 	[Space(10)]
 	[Header("Assists")]
-	[Range(0.01f, 0.5f)] public float coyoteTime; //Grace period after falling off a platform, where you can still jump
+	[Range(0.001f, 0.5f)] public float coyoteTime; //Grace period after falling off a platform, where you can still jump
 	[Range(0.01f, 0.5f)] public float jumpInputBufferTime; //Grace period after pressing jump where a jump will be automatically performed once the requirements (eg. being grounded) are met.
 
 	//Unity Callback, called when the inspector updates

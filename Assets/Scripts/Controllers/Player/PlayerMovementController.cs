@@ -30,7 +30,7 @@ public class PlayerMovementController : MonoBehaviour
     public float LastOnWallLeftTime { get; private set; }
 
     //Jump
-    private int _jumpLeft;
+    private int _airJumpLeft;
     private bool _jumpRefilling;
     private bool _isJumpCut;
     private bool _isJumpFalling;
@@ -182,6 +182,15 @@ public class PlayerMovementController : MonoBehaviour
 
                 WallJump(_lastWallJumpDir);
             }
+            else if (CanAirJump() && LastPressedJumpTime > 0)
+            {
+                IsJumping = true;
+                IsWallJumping = false;
+                _isJumpCut = false;
+                _isJumpFalling = false;
+                _airJumpLeft--;
+                AirJump();
+            }
             //Jump
             else if (CanJump() && LastPressedJumpTime > 0)
             {
@@ -202,9 +211,10 @@ public class PlayerMovementController : MonoBehaviour
         {
 
             _lastDashDir = IsFacingRight ? Vector2.right : Vector2.left;
-            if (IsSliding)
+            if(IsSliding && _moveInput.x == 0)
+            {
                 _lastDashDir.x *= -1;
-
+            }
             AnimHandler.startedDashing = true;
 
             IsDashing = true;
@@ -217,8 +227,10 @@ public class PlayerMovementController : MonoBehaviour
         #endregion
 
         #region SLIDE CHECKS
-        if (CanSlide() && ((LastOnWallLeftTime > 0 && _moveInput.x < 0) || (LastOnWallRightTime > 0 && _moveInput.x > 0)))
+        if (CanSlide() && ((LastOnWallLeftTime > 0) || (LastOnWallRightTime > 0)))
+        {
             IsSliding = true;
+        }
         else
             IsSliding = false;
         #endregion
@@ -389,8 +401,6 @@ public class PlayerMovementController : MonoBehaviour
     #region JUMP METHODS
     private void Jump()
     {
-        _jumpLeft--;
-
         //Ensures we can't call Jump multiple times from one press
         LastPressedJumpTime = 0;
         LastOnGroundTime = 0;
@@ -407,10 +417,19 @@ public class PlayerMovementController : MonoBehaviour
         #endregion
     }
 
+    private void AirJump()
+    {
+        LastPressedJumpTime = 0;
+
+        float force = Data.jumpForce;
+        if (RB.velocity.y < 0)
+            force -= RB.velocity.y;
+
+        RB.AddForce(Vector2.up * force, ForceMode2D.Impulse);
+    }
+
     private void WallJump(int dir)
     {
-        _jumpLeft--;
-
         //Ensures we can't call Wall Jump multiple times from one press
         LastPressedJumpTime = 0;
         LastOnGroundTime = 0;
@@ -432,13 +451,13 @@ public class PlayerMovementController : MonoBehaviour
         RB.AddForce(force, ForceMode2D.Impulse);
         #endregion
     }
-    private IEnumerator RefillJump(int amount)
+    private IEnumerator RefillAirJump(int amount)
     {
         //SHoet cooldown, so we can't constantly dash along the ground, again this is the implementation in Celeste, feel free to change it up
         _jumpRefilling = true;
-        yield return new WaitForSeconds(Data.jumpRefillTime);
+        yield return new WaitForSeconds(Data.airjumpRefillTime);
         _jumpRefilling = false;
-        _jumpLeft = Mathf.Min(Data.jumpAmount, _jumpLeft + 1);
+        _airJumpLeft = Mathf.Min(Data.airJumpAmount, _airJumpLeft + 1);
     }
     #endregion
 
@@ -520,18 +539,16 @@ public class PlayerMovementController : MonoBehaviour
 
     private bool CanJump()
     {
-        if (!Data.multipleJumpable)
+        return LastOnGroundTime > 0 && !IsJumping;
+    }
+
+    private bool CanAirJump()
+    {
+        if (!IsJumping && _airJumpLeft < Data.airJumpAmount && (LastOnGroundTime > 0 || LastOnWallTime > 0) && !_jumpRefilling)
         {
-            return LastOnGroundTime > 0 && !IsJumping;
+            StartCoroutine(nameof(RefillAirJump), 1);
         }
-        else
-        {
-            if (!IsJumping && _jumpLeft < Data.jumpAmount && (LastOnGroundTime > 0 || LastOnWallTime > 0) && !_jumpRefilling)
-            {
-                StartCoroutine(nameof(RefillJump), 1);
-            }
-            return _jumpLeft > 0;
-        }
+        return _airJumpLeft > 0 && Data.airJumpable && LastOnGroundTime <= 0;
     }
 
     private bool CanWallJump()
