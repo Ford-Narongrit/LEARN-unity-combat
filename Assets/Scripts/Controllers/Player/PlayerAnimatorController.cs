@@ -7,15 +7,18 @@ public class PlayerAnimatorController : MonoBehaviour
     private PlayerMovementController mov;
     private SpriteRenderer spriteRend;
 
-
     [Header("Movement Tilt")]
     [SerializeField] private float maxTilt;
     [SerializeField][Range(0, 1)] private float tiltSpeed;
+    [Header("Component")]
+    [SerializeField] private GameObject parent;
 
     [Header("Particle FX")]
     [SerializeField] private GameObject jumpFX;
     [SerializeField] private GameObject landFX;
     [SerializeField] private GameObject dashFX;
+
+    [Header("Particle FX")]
     private ParticleSystem _jumpParticle;
     private ParticleSystem _landParticle;
     private ParticleSystem _dashParticle;
@@ -58,13 +61,6 @@ public class PlayerAnimatorController : MonoBehaviour
         #endregion
 
         CheckAnimationState();
-
-        ParticleSystem.MainModule jumpPSettings = _jumpParticle.main;
-        jumpPSettings.startColor = new ParticleSystem.MinMaxGradient(Color.red);
-
-        ParticleSystem.MainModule landPSettings = _landParticle.main;
-        landPSettings.startColor = new ParticleSystem.MinMaxGradient(Color.red);
-
     }
 
     private void CheckAnimationState()
@@ -72,6 +68,7 @@ public class PlayerAnimatorController : MonoBehaviour
         if (startedJumping)
         {
             GameObject obj = Instantiate(jumpFX, transform.position - (Vector3.up * transform.localScale.y / 2), Quaternion.Euler(-90, 0, 0));
+            obj.transform.parent = parent.transform;
             Destroy(obj, 1);
             startedJumping = false;
             return;
@@ -80,6 +77,8 @@ public class PlayerAnimatorController : MonoBehaviour
         if (justLanded)
         {
             GameObject obj = Instantiate(landFX, transform.position - (Vector3.up * transform.localScale.y / 1.5f), Quaternion.Euler(-90, 0, 0));
+            obj.transform.parent = parent.transform;
+
             Destroy(obj, 1);
             justLanded = false;
             return;
@@ -88,7 +87,8 @@ public class PlayerAnimatorController : MonoBehaviour
         if (startedDashing)
         {
             GameObject obj = Instantiate(dashFX, transform.position - (Vector3.up * transform.localScale.y / 2f), Quaternion.Euler(-90, 0, 0));
-            Destroy(obj, 1);
+            obj.transform.parent = parent.transform;
+            Destroy(obj, mov.Data.dashDuration);
             startedDashing = false;
             return;
         }

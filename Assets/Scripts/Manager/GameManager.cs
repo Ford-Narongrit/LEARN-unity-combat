@@ -5,14 +5,11 @@ using UnityEngine.Tilemaps;
 
 public class GameManager : MonoBehaviour
 {
-    public GameObject startpoint;
+    public GameObject respawnPoint;
+    public GameObject player;
 
-    void OnCollisionEnter2D(Collision2D collision)
+    public void RespawnPlayer()
     {
-        if (collision.gameObject.tag == "Player")
-        {
-            Debug.Log("Hello fucker");
-            collision.transform.position = startpoint.transform.position;
-        }
+        player.transform.position = respawnPoint.transform.position;
     }
 }
