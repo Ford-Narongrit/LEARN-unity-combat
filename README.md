@@ -7,4 +7,7 @@
     * Change multi jump to Air jump that only check player IsOnAir
     * Dash on sliding on wall adjust feeling
     * Sliding not to hold direction anymore
+    -> map
+    * Add movement Effect
+    * Add checkpoint 
 * 0.0.1 -> test movement
