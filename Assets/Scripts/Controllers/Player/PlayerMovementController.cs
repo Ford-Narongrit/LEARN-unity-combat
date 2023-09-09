@@ -211,7 +211,7 @@ public class PlayerMovementController : MonoBehaviour
         {
 
             _lastDashDir = IsFacingRight ? Vector2.right : Vector2.left;
-            if(IsSliding && _moveInput.x == 0)
+            if (IsSliding && _moveInput.x == 0)
             {
                 _lastDashDir.x *= -1;
             }
@@ -422,8 +422,7 @@ public class PlayerMovementController : MonoBehaviour
         LastPressedJumpTime = 0;
 
         float force = Data.jumpForce;
-        if (RB.velocity.y < 0)
-            force -= RB.velocity.y;
+        force -= RB.velocity.y;
 
         RB.AddForce(Vector2.up * force, ForceMode2D.Impulse);
     }
