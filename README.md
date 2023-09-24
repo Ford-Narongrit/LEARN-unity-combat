@@ -1,6 +1,8 @@
+
 # Moment script for unity
 
 ## version 
+* done
 * 0.0.3 -> defect jump and camera
     * fixbug jump to the moon
     * adjust player camera
